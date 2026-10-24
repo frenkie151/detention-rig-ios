@@ -23,7 +23,8 @@ final class AppModel {
     var selectedTab = AppTab.today
     var toast: String?
 
-    private var activity: Activity<DetentionActivityAttributes>?
+    /// Only the id is kept: `Activity` isn't Sendable, so the main actor never holds one across an await.
+    private var activityID: String?
     private var lastPublishedAmount: Decimal?
 
     func snapshot(at now: Date = .now) -> DetentionSnapshot {
@@ -74,30 +75,39 @@ final class AppModel {
 
     /// Shows the running clock on the Lock Screen and in the Dynamic Island.
     func startLiveActivity() async {
-        guard activity == nil, ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard activityID == nil, ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let s = snapshot()
         let attributes = DetentionActivityAttributes(
             loadID: "DR-2041", receiver: "Lodi Cold Storage",
             arrivedAt: arrivedAt, freeTimeEndsAt: s.freeTimeEndsAt)
-        activity = try? Activity.request(
+        activityID = try? Activity.request(
             attributes: attributes,
             content: content(for: s),
-            pushType: nil)
+            pushType: nil).id
         lastPublishedAmount = s.amount
     }
 
     /// Call once a second while the app is open; only talks to ActivityKit when the bill changes.
     func tick(_ now: Date) async {
         let amount = snapshot(at: now).amount
-        guard activity != nil, amount != lastPublishedAmount else { return }
+        guard activityID != nil, amount != lastPublishedAmount else { return }
         await publishActivity(now)
     }
 
     private func publishActivity(_ now: Date = .now) async {
-        guard let activity else { return }
+        guard let activityID else { return }
         let s = snapshot(at: now)
         lastPublishedAmount = s.amount
-        await activity.update(content(for: s))
+        await Self.update(activityID, with: content(for: s))
+    }
+
+    /// Runs off the main actor and looks the activity up there, so the non-Sendable `Activity` never crosses isolation.
+    @concurrent private nonisolated static func update(
+        _ id: String,
+        with content: ActivityContent<DetentionActivityAttributes.ContentState>
+    ) async {
+        guard let activity = Activity<DetentionActivityAttributes>.activities.first(where: { $0.id == id }) else { return }
+        await activity.update(content)
     }
 
     private func content(for s: DetentionSnapshot) -> ActivityContent<DetentionActivityAttributes.ContentState> {
