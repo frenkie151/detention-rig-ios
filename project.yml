@@ -1,0 +1,80 @@
+# Generate DetentionRig.xcodeproj with XcodeGen: `brew install xcodegen && xcodegen`
+name: DetentionRig
+
+options:
+  bundleIdPrefix: com.example.detentionrig
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+  xcodeVersion: "27.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Set your team here, or pick it in Xcode under Signing & Capabilities.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  DetentionCore:
+    path: Packages/DetentionCore
+
+targets:
+  DetentionRig:
+    type: application
+    platform: iOS
+    sources:
+      - DetentionRig
+      - Shared
+    dependencies:
+      - package: DetentionCore
+      - target: DetentionRigWidgets
+    info:
+      path: DetentionRig/Info.plist
+      properties:
+        CFBundleDisplayName: Detention Rig
+        UILaunchScreen: {}
+        NSSupportsLiveActivities: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.detentionrig
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  DetentionRigWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - DetentionRigWidgets
+      - Shared
+    dependencies:
+      - package: DetentionCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: DetentionRigWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Detention Rig
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.detentionrig.widgets
+
+schemes:
+  DetentionRig:
+    build:
+      targets:
+        DetentionRig: all
+    test:
+      targets:
+        - package: DetentionCore/DetentionCoreTests

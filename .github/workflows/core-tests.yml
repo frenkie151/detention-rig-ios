@@ -1,0 +1,16 @@
+name: Core tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  swift-test:
+    runs-on: ubuntu-24.04
+    container: swift:6.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run DetentionCore tests
+        working-directory: Packages/DetentionCore
+        run: swift test
